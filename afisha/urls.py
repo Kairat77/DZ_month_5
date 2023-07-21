@@ -31,7 +31,9 @@ urlpatterns = [
     path('api/v1/movies/',views.movies_view),
     path('api/v1/movies/<int:id>/',views.movies_id_view),
     path('api/v1/reviews/',views.review_view),
-    path('api/v1/reviews/<int:id>/',views.review_id_view)
+    path('api/v1/reviews/<int:id>/',views.review_id_view),
+    path('api/v1/movies/reviews/', views.movie_reviews_view, name='movie_reviews_view'),
+   
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

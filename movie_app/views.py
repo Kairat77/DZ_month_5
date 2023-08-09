@@ -6,6 +6,9 @@ from movie_app.serializers import (
     DirectorSerializers,
     MovieSerializers,
     ReviewSerializers,
+    DirectorValidateSerializer,
+    MovieValidateSerializers,
+    ReviewValidateSerializers
 )
 from rest_framework import status
 
@@ -17,17 +20,15 @@ def director_view(request):
         serializer = DirectorSerializers(directors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     elif request.method == "POST":
+        serializer = DirectorValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+          return Response(status=400, data=serializer.errors)
         name = request.data.get("name")
         director = Director.objects.create(name=name)
         return Response(data=DirectorSerializers(director).data)
 
 
-# @api_view(["GET", "POST"])
-# def director_view(request):
-#     if request.method == "GET":
-#         director = Director.objects.all()
-#         data = DirectorSerializers(instance=director, many=True).data
-#         return Response(data=data)
+
 
 
 @api_view(["GET", "PUT", "DELETE"])
@@ -40,9 +41,14 @@ def director_id_view(request, id):
         data = DirectorSerializers(instance=director, many=False).data
         return Response(data=data)
     elif request.method == "PUT":
-        director.name = request.data.get("name")
-        director.movies_count = request.data.get("movies_count")
-        return Response(data=DirectorSerializers(director).data)
+        serializer = DirectorValidateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.is_valid():
+            director.name = serializer.validated_data.get("name")
+            director.movies_count = serializer.validated_data.get("movies_count")
+            director.save()
+            return Response(data=DirectorSerializers(director).data)
+        return Response(data=serializer.errors, status=400)
     else:
         director.delete()
         return Response(status=204)
@@ -55,6 +61,9 @@ def movies_view(request):
         data = MovieSerializers(instance=movie, many=True).data
         return Response(data=data)
     elif request.method == "POST":
+        #Validation
+        serializer = MovieValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
         title = request.data.get("title")
         description = request.data.get("description")
         duration = request.data.get("duration")
@@ -78,6 +87,8 @@ def movies_id_view(request, id):
         data = MovieSerializers(instance=movie, many=False).data
         return Response(data=data)
     elif request.method == 'PUT':
+        serializer = MovieValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
         movie.title = request.data.get('title')
         movie.description = request.data.get('description')
         movie.duration = request.data.get('duration')
@@ -96,6 +107,8 @@ def review_view(request):
         data = ReviewSerializers(instance=review, many=True).data
         return Response(data=data)
     elif request.method == 'POST':
+        serializer = ReviewValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
         text = request.data.get("text")
         movie_id = request.data.get("movie")
         rating_id = request.data.get("rating")
@@ -115,6 +128,8 @@ def review_id_view(request, id):
         data = ReviewSerializers(instance=review, many=False).data
         return Response(data=data)
     elif request.method == 'PUT':
+        serializer = ReviewValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
         review.text = request.data.get('text')
         review.movie_id = request.data.get('movie')
         review.rating_id = request.data.get('rating')
@@ -124,22 +139,24 @@ def review_id_view(request, id):
         return Response(status=204)
 
 
+
 @api_view(["GET"])
 def movie_reviews_view(request):
     # Fetch all movies with their reviews
     movies = Movie.objects.prefetch_related("review_set").all()
 
-    # Calculate the average rating of all reviews
-    reviews = Review.objects.all()
-    total_ratings = sum(review.rating.stars for review in reviews)
-    average_rating = total_ratings / reviews.count() if reviews.count() > 0 else 0
+    # Calculate the average rating and total ratings for each movie
+    data = []
+    for movie in movies:
+        reviews = movie.review_set.all()
+        total_ratings = sum(review.rating.stars for review in reviews) if reviews else 0
+        average_rating = total_ratings / reviews.count() if reviews.count() > 0 else 0
 
-    # Serialize the data
-    serializer = MovieSerializers(movies, many=True)
-
-    data = {
-        "movies": serializer.data,
-        "average_rating": average_rating,
-    }
+        serializer = MovieSerializers(movie)
+        movie_data = serializer.data
+        movie_data["average_rating"] = average_rating
+        movie_data["total_ratings"] = total_ratings
+        data.append(movie_data)
 
     return Response(data, status=status.HTTP_200_OK)
+

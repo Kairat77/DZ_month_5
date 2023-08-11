@@ -26,14 +26,11 @@ urlpatterns = [
     path('jet/', include('jet.urls', 'jet')),
     path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
     path('admin/', admin.site.urls),
-    path('api/v1/directors/',views.director_view),
-    path('api/v1/directors/<int:id>/',views.director_id_view),
-    path('api/v1/movies/',views.movies_view),
-    path('api/v1/movies/<int:id>/',views.movies_id_view),
-    path('api/v1/reviews/',views.review_view),
-    path('api/v1/reviews/<int:id>/',views.review_id_view),
+    path('api/v1/directors/',include('movie_app.urls')),
+    path('api/v1/movies/',include('movie_app.urls')),
+    path('api/v1/reviews/',include('movie_app.urls')),
     path('api/v1/movies/reviews/', views.movie_reviews_view, name='movie_reviews_view'),
-   
+    path('api/v1/users/', include('users.urls'))
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
